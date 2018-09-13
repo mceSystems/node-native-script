@@ -1,0 +1,47 @@
+//
+//  ReferenceTypeConstructor.cpp
+//  NativeScript
+//
+//  Created by Ivan Buhov on 11/3/14.
+//  Copyright (c) 2014 Telerik. All rights reserved.
+//
+
+#include "jsc-includes.h"
+#include "ReferenceTypeConstructor.h"
+#include "Interop.h"
+#include "PointerInstance.h"
+#include "ReferenceTypeInstance.h"
+#include "TypeFactory.h"
+#include <JavaScriptCore/Error.h>
+
+namespace NativeScript {
+using namespace JSC;
+
+const ClassInfo ReferenceTypeConstructor::s_info = { "ReferenceType", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(ReferenceTypeConstructor) };
+
+void ReferenceTypeConstructor::finishCreation(VM& vm, JSObject* referenceTypePrototype) {
+    Base::finishCreation(vm, this->classInfo()->className);
+
+    this->putDirectWithoutTransition(vm, vm.propertyNames->prototype, referenceTypePrototype, PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
+}
+
+EncodedJSValue JSC_HOST_CALL ReferenceTypeConstructor::constructReferenceType(ExecState* execState) {
+    NativeScriptRuntime* runtime = NativeScriptRuntime::getRuntime(execState);
+
+    JSC::VM& vm = execState->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    if (execState->argumentCount() != 1) {
+        return throwVMError(execState, scope, createError(execState, WTF::ASCIILiteral("ReferenceType constructor expects one argument.")));
+    }
+
+    JSValue type = execState->uncheckedArgument(0);
+    const FFITypeMethodTable* methodTable;
+    if (!tryGetFFITypeMethodTable(vm, type, &methodTable)) {
+        return throwVMError(execState, scope, createError(execState, WTF::ASCIILiteral("Not a valid type object is passed as parameter.")));
+    }
+
+    return JSValue::encode(runtime->typeFactory()->getReferenceType(execState->lexicalGlobalObject(), type.asCell()));
+}
+
+} // namespace NativeScript
